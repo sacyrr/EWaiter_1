@@ -7,17 +7,83 @@
 //
 
 import UIKit
+import GoogleSignIn
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, GIDSignInDelegate{
+    func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!, withError error: Error!) {
+        if let error = error {
+            print("\(error.localizedDescription)")
+            // [START_EXCLUDE silent]
+            NotificationCenter.default.post(
+                name: Notification.Name(rawValue: "ToggleAuthUINotification"), object: nil, userInfo: nil)
+            // [END_EXCLUDE]
+        } else {
+            // Perform any operations on signed in user here.
+            let userId = user.userID                  // For client-side use only!
+            let idToken = user.authentication.idToken // Safe to send to the server
+            let fullName = user.profile.name
+            let givenName = user.profile.givenName
+            let familyName = user.profile.familyName
+            let email = user.profile.email
+            // [START_EXCLUDE]
+            NotificationCenter.default.post(
+                name: Notification.Name(rawValue: "ToggleAuthUINotification"),
+                object: nil,
+                userInfo: ["statusText": "Signed in user:\n\(fullName)"])
+            // [END_EXCLUDE]
+        }
+        func sign(_ signIn: GIDSignIn!, didDisconnectWith user: GIDGoogleUser!,
+                  withError error: Error!) {
+            // Perform any operations when the user disconnects from app here.
+            // [START_EXCLUDE]
+            NotificationCenter.default.post(
+                name: Notification.Name(rawValue: "ToggleAuthUINotification"),
+                object: nil,
+                userInfo: ["statusText": "User has disconnected."])
+            // [END_EXCLUDE]
+        }
+    }
+    
 
     var window: UIWindow?
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        GIDSignIn.sharedInstance().clientID = "YOUR_CLIENT_ID"
+        GIDSignIn.sharedInstance().delegate = self
+        let userDetaults = UserDefaults.standard
+        let loginStatus:Bool? = userDetaults.value(forKey: "LoginStatus") as? Bool
+        
+        if loginStatus == nil {
+            // login
+            loadLoginViewController()
+        } else {
+            if loginStatus! == true {
+                // home
+                loadHamburgerMenuViewController()
+            } else {
+                // login
+                loadLoginViewController()
+            }
+        }
         return true
+        
+     
     }
+    func loadLoginViewController() {
+        let signinViewController = Utils.createViewController(id: "SignInViewController")
+        let nvc = UINavigationController(rootViewController : signinViewController)
+        window!.rootViewController = nvc
+    }
+    
+    func loadHamburgerMenuViewController() {
+        let homeViewController = Utils.createViewController(id: "HamburgerMenuViewController")
+        let nvc = UINavigationController(rootViewController : homeViewController)
+        window!.rootViewController = nvc
+    }
+
 
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
